@@ -11098,5 +11098,15 @@ namespace Sandbox.Game.Localization
         ///Ship will jump in {0} seconds.
         ///</summary>
         public static readonly MyStringId NotificationJumpWarmupTime = MyStringId.GetOrCompute("NotificationJumpWarmupTime");
+
+        ///<summary>
+        ///Hide armor blocks
+        ///</summary>
+        public static readonly MyStringId HideArmorBlockToggle = MyStringId.GetOrCompute("HideArmorBlockToggle");
+
+        ///<summary>
+        ///Hide armor blocks
+        ///</summary>
+        public static readonly MyStringId HideArmorBlockTooltip = MyStringId.GetOrCompute("HideArmorBlockTooltip");
     }
 }

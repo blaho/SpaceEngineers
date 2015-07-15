@@ -55,7 +55,7 @@ namespace Sandbox.Game.Entities.Blocks
                 return m_clipboard;
             }
         }
-        
+
         private Vector3I m_projectionOffset;
         private Vector3I m_projectionRotation;
 
@@ -72,6 +72,8 @@ namespace Sandbox.Game.Entities.Blocks
 
         private bool m_showOnlyBuildable = false;
 
+        private bool m_hideArmorBlock = false;
+
         //Projector needs to wait some frames before it can ask if it is powered.
         private int m_frameCount = 0;
         private bool m_removeRequested = false;
@@ -81,7 +83,7 @@ namespace Sandbox.Game.Entities.Blocks
             get;
             protected set;
         }
-        
+
         public MyProjector()
             : base()
         {
@@ -89,7 +91,7 @@ namespace Sandbox.Game.Entities.Blocks
             m_spawnClipboard = new MyProjectorClipboard(this);
         }
 
-        private MyCubeGrid ProjectedGrid 
+        private MyCubeGrid ProjectedGrid
         {
             get
             {
@@ -146,6 +148,17 @@ namespace Sandbox.Game.Entities.Blocks
             };
             showOnlyBuildableBlockToggle.Enabled = (b) => b.IsProjecting();
             MyTerminalControlFactory.AddControl(showOnlyBuildableBlockToggle);
+
+            //HideArmorBlocks
+            var hideArmorBlockToggle = new MyTerminalControlCheckbox<MyProjector>("HideArmorBlocks", MySpaceTexts.HideArmorBlockToggle, MySpaceTexts.HideArmorBlockTooltip);
+            hideArmorBlockToggle.Getter = (x) => x.m_hideArmorBlock;
+            hideArmorBlockToggle.Setter = (x, v) =>
+            {
+                x.m_hideArmorBlock = v;
+                x.OnOffsetsChanged();
+            };
+            hideArmorBlockToggle.Enabled = (b) => b.IsProjecting();
+            MyTerminalControlFactory.AddControl(hideArmorBlockToggle);
 
             //Position
             var offsetX = new MyTerminalControlSlider<MyProjector>("X", MySpaceTexts.BlockPropertyTitle_ProjectionOffsetX, MySpaceTexts.Blank);
@@ -303,7 +316,7 @@ namespace Sandbox.Game.Entities.Blocks
 
 
         #region UI
-        
+
         private bool IsProjecting()
         {
             return m_clipboard.IsActive;
@@ -512,7 +525,7 @@ namespace Sandbox.Game.Entities.Blocks
                 SyncObject.SendNewMaxNumberOfProjections((int)Math.Round(v));
             }
         }
-        
+
         #endregion
 
         #region Block Visibility
@@ -659,7 +672,7 @@ namespace Sandbox.Game.Entities.Blocks
             PowerReceiver.Update();
             m_statsDirty = true;
             UpdateText();
-            
+
             SyncObject = new MySyncProjector(this);
 
             NeedsUpdate |= MyEntityUpdateEnum.BEFORE_NEXT_FRAME;
@@ -668,7 +681,7 @@ namespace Sandbox.Game.Entities.Blocks
 
             CubeGrid.OnBlockAdded += previewGrid_OnBlockAdded;
             CubeGrid.OnBlockRemoved += previewGrid_OnBlockRemoved;
-        
+
             CubeGrid.OnGridSplit += CubeGrid_OnGridSplit;
         }
 
@@ -726,7 +739,7 @@ namespace Sandbox.Game.Entities.Blocks
                     objectBuilder.ProjectedGrid = null;
                 }
             }
-            
+
             objectBuilder.ShowOnlyBuildable = m_showOnlyBuildable;
             objectBuilder.InstantBuildingEnabled = m_instantBuildingEnabled;
             objectBuilder.MaxNumberOfProjections = m_maxNumberOfProjections;
@@ -786,7 +799,7 @@ namespace Sandbox.Game.Entities.Blocks
         public override void UpdateBeforeSimulation()
         {
             base.UpdateBeforeSimulation();
-            
+
             if (m_clipboard.IsActive)
             {
                 m_clipboard.Update();
@@ -877,6 +890,12 @@ namespace Sandbox.Game.Entities.Blocks
                     }
                     else
                     {
+                        if (m_hideArmorBlock && (projectedBlock.BlockDefinition.DisplayNameText == "Light Armor Block" || projectedBlock.BlockDefinition.DisplayNameText.Contains("Heavy Armor")))
+                        {
+                            m_hiddenBlocks.Add(projectedBlock);
+                            m_remainingBlocks--;
+                            continue;
+                        }
                         bool canBuild = CanBuild(projectedBlock);
                         if (canBuild)
                         {
@@ -1033,7 +1052,7 @@ namespace Sandbox.Game.Entities.Blocks
             var debugNotification = new MyHudNotification(textToDisplay, 5000, level: MyNotificationLevel.Important);
             MyHud.Notifications.Add(debugNotification);
         }
-        
+
         protected override void Closing()
         {
             base.Closing();
@@ -1088,7 +1107,7 @@ namespace Sandbox.Game.Entities.Blocks
         {
             return BlockDefinition.RequiredPowerInput;
         }
-        
+
         protected override bool CheckIsWorking()
         {
             if (PowerReceiver != null && !PowerReceiver.IsPowered)
@@ -1106,7 +1125,7 @@ namespace Sandbox.Game.Entities.Blocks
             }
             else
             {
-             if (IsWorking && !IsProjecting())
+                if (IsWorking && !IsProjecting())
                 {
                     if (m_clipboard.HasCopiedGrids())
                     {
@@ -1139,7 +1158,7 @@ namespace Sandbox.Game.Entities.Blocks
                 m_originalGridBuilder = m_savedProjection;
                 m_savedProjection = null;
                 InitializeClipboard();
-                
+
                 //This will just issue the request
                 //It will only remove it only if conditions are not met a few frames later
                 RequestRemoveProjection();
@@ -1242,7 +1261,7 @@ namespace Sandbox.Game.Entities.Blocks
                 {
                     OnConfirmSpawnProjection();
                 }
-                    
+
                 m_spawnClipboard.Deactivate();
                 m_spawnClipboard.Clear();
             }
@@ -1311,7 +1330,7 @@ namespace Sandbox.Game.Entities.Blocks
         public BuildCheckResult CanBuild(MySlimBlock projectedBlock, bool checkHavokIntersections)
         {
             MyBlockOrientation blockOrientation = projectedBlock.Orientation;
-            
+
             Matrix local;
             blockOrientation.GetMatrix(out local);
             var gridOrientation = (m_clipboard as MyGridClipboard).GetFirstGridOrientationMatrix();
@@ -1320,7 +1339,7 @@ namespace Sandbox.Game.Entities.Blocks
                 var afterRotation = Matrix.Multiply(local, gridOrientation);
                 blockOrientation = new MyBlockOrientation(ref afterRotation);
             }
-            
+
             Quaternion blockOrientationQuat;
             blockOrientation.GetQuaternion(out blockOrientationQuat);
 
@@ -1346,9 +1365,9 @@ namespace Sandbox.Game.Entities.Blocks
             MyGridPlacementSettings settings = new MyGridPlacementSettings();
             settings.Mode = MyGridPlacementSettings.SnapMode.OneFreeAxis;
 
-			var mountPoints = projectedBlock.BlockDefinition.GetBuildProgressModelMountPoints(1.0f);
-			bool isConnected = MyCubeGrid.CheckConnectivity(this.CubeGrid, projectedBlock.BlockDefinition, mountPoints,
-															ref blockOrientationQuat, ref blockPos);
+            var mountPoints = projectedBlock.BlockDefinition.GetBuildProgressModelMountPoints(1.0f);
+            bool isConnected = MyCubeGrid.CheckConnectivity(this.CubeGrid, projectedBlock.BlockDefinition, mountPoints,
+                                                            ref blockOrientationQuat, ref blockPos);
             if (isConnected)
             {
                 if (CubeGrid.GetCubeBlock(blockPos) == null)
@@ -1445,7 +1464,7 @@ namespace Sandbox.Game.Entities.Blocks
         internal void SetNewBlueprint(MyObjectBuilder_CubeGrid gridBuilder)
         {
             m_originalGridBuilder = gridBuilder;
-            
+
             var clone = (MyObjectBuilder_CubeGrid)gridBuilder.Clone();
 
             MyEntities.RemapObjectBuilder(clone);
@@ -1834,7 +1853,7 @@ namespace Sandbox.Game.Entities.Blocks
                 msg.EntityId = m_projector.EntityId;
                 Sync.Layer.SendMessageToAllAndSelf(ref msg);
             }
-            
+
             private static void OnSetMaxNumberOfProjections(ref SetMaxNumberOfProjectionsMsg msg, MyNetworkClient sender)
             {
                 MyEntity projectorEntity;
@@ -1853,7 +1872,7 @@ namespace Sandbox.Game.Entities.Blocks
                 msg.EntityId = m_projector.EntityId;
                 Sync.Layer.SendMessageToAllAndSelf(ref msg);
             }
-            
+
             private static void OnSetMaxNumberOfBlocks(ref SetMaxNumberOfBlocksMsg msg, MyNetworkClient sender)
             {
                 MyEntity projectorEntity;
@@ -1927,9 +1946,9 @@ namespace Sandbox.Game.Entities.Blocks
         int ModAPI.Ingame.IMyProjector.ProjectionOffsetY { get { return this.m_projectionOffset.Y; } }
         int ModAPI.Ingame.IMyProjector.ProjectionOffsetZ { get { return this.m_projectionOffset.Z; } }
 
-        int ModAPI.Ingame.IMyProjector.ProjectionRotX { get { return this.m_projectionRotation.X*90; } }
+        int ModAPI.Ingame.IMyProjector.ProjectionRotX { get { return this.m_projectionRotation.X * 90; } }
         int ModAPI.Ingame.IMyProjector.ProjectionRotY { get { return this.m_projectionRotation.Y * 90; } }
-        int ModAPI.Ingame.IMyProjector.ProjectionRotZ { get { return this.m_projectionRotation.Z* 90; } }
+        int ModAPI.Ingame.IMyProjector.ProjectionRotZ { get { return this.m_projectionRotation.Z * 90; } }
 
         int ModAPI.Ingame.IMyProjector.RemainingBlocks { get { return this.m_remainingBlocks; } }
 
@@ -1937,7 +1956,7 @@ namespace Sandbox.Game.Entities.Blocks
         void ModAPI.Ingame.IMyProjector.LoadRandomBlueprint(string searchPattern)
         {
             string[] files = System.IO.Directory.GetFiles(Path.Combine(MyFileSystem.ContentPath, "Data", "Blueprints"), searchPattern);
-            
+
             var index = MyRandom.Instance.Next() % files.Length;
             LoadBlueprint(files[index]);
         }

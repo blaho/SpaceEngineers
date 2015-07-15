@@ -6867,4 +6867,10 @@ Available in scenario edit mode only.</value>
   <data name="NotificationJumpWarmupTime" xml:space="preserve">
     <value>Ship will jump in {0} seconds.</value>
   </data>
+  <data name="HideArmorBlockToggle" xml:space="preserve">
+    <value>Hide armor blocks</value>
+  </data>
+  <data name="HideArmorBlockTooltip" xml:space="preserve">
+    <value>Hide armor blocks</value>
+  </data>
 </root>
